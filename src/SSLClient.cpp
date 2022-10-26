@@ -114,7 +114,7 @@ int SSLClient::connect(const char* host, uint16_t port, const char* _CA_cert, co
     _connected = false;
     return 0;
   }
-  log_d("SSL connection established");
+  log_v("SSL connection established");
   _connected = true;
   return 1;
 }
