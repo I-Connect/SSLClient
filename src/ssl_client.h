@@ -15,6 +15,8 @@
 
 #include <Client.h>
 
+namespace SSLC{
+
 typedef struct sslclient_context {
     Client* client;
 
@@ -42,3 +44,5 @@ bool verify_ssl_fingerprint(sslclient_context *ssl_client, const char* fp, const
 bool verify_ssl_dn(sslclient_context *ssl_client, const char* domain_name);
 
 #endif
+
+} //end namespace

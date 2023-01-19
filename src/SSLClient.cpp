@@ -23,7 +23,7 @@
 #undef write
 #undef read
 
-
+namespace SSLC {
 SSLClient::SSLClient()
 {
   _connected = false;
@@ -321,3 +321,5 @@ void SSLClient::setHandshakeTimeout(unsigned long handshake_timeout)
 {
   sslclient->handshake_timeout = handshake_timeout * 1000;
 }
+
+} //end namespace
