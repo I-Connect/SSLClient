@@ -79,15 +79,29 @@ static int client_net_recv(void* ctx, unsigned char* buf, size_t len) {
 int client_net_recv_timeout(void* ctx, unsigned char* buf,
                             size_t len, uint32_t timeout) {
   Client* client = (Client*)ctx;
+
+  //Set a default timeout as it seems it is not always set the way we use the ssl client
+  // a timeout of 0
+  uint32_t _timeout = 1000;
+  if (timeout > 0) {
+    _timeout = timeout;
+  }
+
   if (!client) {
     log_e("Uninitialised!");
     return -1;
   }
   unsigned long start = millis();
-  unsigned long tms = start + timeout;
+  unsigned long tms = start + _timeout;
   do {
     int pending = client->available();
-    if (pending < len && timeout > 0) {
+    //read chuncks of 1024
+    if(pending > 1024){
+      break;
+    }
+
+    //read last bit or wait on timeout
+    if (pending < len) {
       delay(1);
     } else {
       break;
@@ -100,7 +114,7 @@ int client_net_recv_timeout(void* ctx, unsigned char* buf,
     return MBEDTLS_ERR_SSL_WANT_READ;
   }
 
-  log_v("SSL client RX (received=%d expected=%d in %dms)", result, len, millis() - start);
+  log_d("SSL client RX (received=%d expected=%d in %dms)", result, len, millis() - start);
 
   if (result > 0) {
     //esp_log_buffer_hexdump_internal("SSL.RD", buf, (uint16_t)result, ESP_LOG_VERBOSE);
