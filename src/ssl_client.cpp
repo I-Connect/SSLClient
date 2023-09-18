@@ -82,7 +82,7 @@ int client_net_recv_timeout(void* ctx, unsigned char* buf,
 
   //Set a default timeout as it seems it is not always set the way we use the ssl client
   // a timeout of 0
-  uint32_t _timeout = 1000;
+  uint32_t _timeout = 100;
   if (timeout > 0) {
     _timeout = timeout;
   }
@@ -95,8 +95,8 @@ int client_net_recv_timeout(void* ctx, unsigned char* buf,
   unsigned long tms = start + _timeout;
   do {
     int pending = client->available();
-    //read chuncks of 1024
-    if (pending > 1024) {
+    //read chuncks of 2048
+    if (pending > 2048) {
       break;
     }
 
