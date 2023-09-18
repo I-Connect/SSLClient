@@ -96,7 +96,7 @@ int client_net_recv_timeout(void* ctx, unsigned char* buf,
   do {
     int pending = client->available();
     //read chuncks of 1024
-    if(pending > 1024){
+    if (pending > 1024) {
       break;
     }
 
@@ -114,7 +114,7 @@ int client_net_recv_timeout(void* ctx, unsigned char* buf,
     return MBEDTLS_ERR_SSL_WANT_READ;
   }
 
-  log_d("SSL client RX (received=%d expected=%d in %dms)", result, len, millis() - start);
+  log_v("SSL client RX (received=%d expected=%d in %dms)", result, len, millis() - start);
 
   if (result > 0) {
     //esp_log_buffer_hexdump_internal("SSL.RD", buf, (uint16_t)result, ESP_LOG_VERBOSE);
