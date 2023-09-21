@@ -22,8 +22,6 @@
 #include "IPAddress.h"
 #include "ssl_client.h"
 
-namespace SSLC {
-
 class SSLClient : public Client
 {
 protected:
@@ -99,5 +97,3 @@ private:
 };
 
 #endif /* SSLClient_H */
-
-} //end namespace

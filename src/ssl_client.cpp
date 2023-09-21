@@ -18,31 +18,31 @@
 //#include <esp32-hal-log.h>
 
 #if !defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
-#  error "Please configure IDF framework to include mbedTLS -> Enable pre-shared-key ciphersuites and activate at least one cipher"
+  #error "Please configure IDF framework to include mbedTLS -> Enable pre-shared-key ciphersuites and activate at least one cipher"
 #endif
 
 const char* pers = "esp32-tls";
 
 /**
  * \brief           Handle the error.
- * 
+ *
  * \param err       int - The error code.
  * \param function  const char* - The function name.
- * \param line      int - The line number. 
- * \return int      The error code. 
+ * \param line      int - The line number.
+ * \return int      The error code.
  */
-static int _handle_error(int err, const char * function, int line) {
-    if(err == -30848){
-        return err;
-    }
-#ifdef MBEDTLS_ERROR_C
-    char error_buf[100];
-    mbedtls_strerror(err, error_buf, 100);
-    log_e("[%s():%d]: (%d) %s", function, line, err, error_buf);
-#else
-    log_e("[%s():%d]: code %d", function, line, err);
-#endif
+static int _handle_error(int err, const char* function, int line) {
+  if (err == -30848) {
     return err;
+  }
+  #ifdef MBEDTLS_ERROR_C
+  char error_buf[100];
+  mbedtls_strerror(err, error_buf, 100);
+  log_e("[%s():%d]: (%d) %s", function, line, err, error_buf);
+  #else
+  log_e("[%s():%d]: code %d", function, line, err);
+  #endif
+  return err;
 }
 
 #define handle_error(e) _handle_error(e, __FUNCTION__, __LINE__)
@@ -59,16 +59,16 @@ static int _handle_error(int err, const char * function, int line) {
  *                 or a non-zero error code; with a non-blocking socket,
  *                 MBEDTLS_ERR_SSL_WANT_READ indicates read() would block.
  */
-static int client_net_recv( void *ctx, unsigned char *buf, size_t len ) {
-  Client *client = (Client*)ctx;
-  if (!client) { 
+static int client_net_recv( void* ctx, unsigned char* buf, size_t len ) {
+  Client* client = (Client*)ctx;
+  if (!client) {
     log_e("Uninitialised!");
     return -1;
   }
-  
+
   if (!client->connected()) {
-     log_e("Not connected!");
-     return -2;
+    log_e("Not connected!");
+    return -2;
   }
 
   int result = client->read(buf, len);
@@ -77,54 +77,56 @@ static int client_net_recv( void *ctx, unsigned char *buf, size_t len ) {
   if (result > 0) {
     //esp_log_buffer_hexdump_internal("SSL.RD", buf, (uint16_t)result, ESP_LOG_VERBOSE);
   }
-  
+
   return result;
 }
 
 /**
  * \brief           Read at most 'len' characters. If no error occurs,
  *                  the actual amount read is returned.
- * 
- * \param ctx       Client* - The client context. 
- * \param buf       unsigned char* - The buffer to write to. 
- * \param len       size_t - The maximum length of the buffer. 
- * \param timeout   uint32_t - The timeout in milliseconds. 
+ *
+ * \param ctx       Client* - The client context.
+ * \param buf       unsigned char* - The buffer to write to.
+ * \param len       size_t - The maximum length of the buffer.
+ * \param timeout   uint32_t - The timeout in milliseconds.
  * \return int      The number of bytes received, or a non-zero error code;
  *                  with a non-blocking socket, MBEDTLS_ERR_SSL_WANT_READ
- *                  indicates read() would block. 
+ *                  indicates read() would block.
  */
-int client_net_recv_timeout(void *ctx, unsigned char *buf, size_t len, uint32_t timeout) {
-  Client *client = (Client*)ctx;
+int client_net_recv_timeout(void* ctx, unsigned char* buf, size_t len, uint32_t timeout) {
+  Client* client = (Client*)ctx;
 
   log_v("Timeout set to %u", timeout);
 
-  if (!client) { 
+  if (!client) {
     log_e("Uninitialised!");
     return -1;
   }
 
   unsigned long start = millis();
   unsigned long tms = start + timeout;
-  
+
   do {
     int pending = client->available();
     if (pending < len && timeout > 0) {
       delay(1);
-    } else break;
+    } else {
+      break;
+    }
   } while (millis() < tms);
-  
+
   int result = client->read(buf, len);
-  
+
   if (!result) {
     return MBEDTLS_ERR_SSL_WANT_READ;
   }
 
-  log_v("SSL client RX (received=%d expected=%zu in %lums)", result, len, millis()-start);
+  log_v("SSL client RX (received=%d expected=%zu in %lums)", result, len, millis() - start);
 
   if (result > 0) {
     //esp_log_buffer_hexdump_internal("SSL.RD", buf, (uint16_t)result, ESP_LOG_VERBOSE);
   }
-  
+
   return result;
 }
 
@@ -139,18 +141,18 @@ int client_net_recv_timeout(void *ctx, unsigned char *buf, size_t len, uint32_t 
  *                error code; with a non-blocking socket,
  *                MBEDTLS_ERR_SSL_WANT_WRITE indicates write() would block.
  */
-static int client_net_send( void *ctx, const unsigned char *buf, size_t len ) {
-  Client *client = (Client*)ctx;
-  if (!client) { 
+static int client_net_send( void* ctx, const unsigned char* buf, size_t len ) {
+  Client* client = (Client*)ctx;
+  if (!client) {
     log_e("Uninitialised!");
     return -1;
   }
-  
+
   if (!client->connected()) {
     log_e("Not connected!");
     return -2;
   }
-  
+
   // esp_log_buffer_hexdump_internal("SSL.WR", buf, (uint16_t)len, ESP_LOG_VERBOSE);BEDTLS_ERR_NET_SEND_FAILED;
 
   int result = 0;
@@ -175,18 +177,18 @@ static int client_net_send( void *ctx, const unsigned char *buf, size_t len ) {
       break;
     }
   }
-  
+
   log_d("SSL client TX res=%d len=%zu", result, len);
   return result;
 }
 
 /**
  * \brief             Initialize the sslclient_context struct.
- * 
- * \param ssl_client  sslclient_context* - The ssl client context. 
- * \param client      Client* - The client. 
+ *
+ * \param ssl_client  sslclient_context* - The ssl client context.
+ * \param client      Client* - The client.
  */
-void ssl_init(sslclient_context *ssl_client, Client *client)
+void ssl_init(sslclient_context* ssl_client, Client* client)
 {
   log_v("Init SSL");
   // reset embedded pointers to zero
@@ -199,7 +201,7 @@ void ssl_init(sslclient_context *ssl_client, Client *client)
 
 /**
  * \brief             Start the ssl client.
- * 
+ *
  * \param ssl_client  sslclient_context* - The ssl client context.
  * \param host        const char* - The host to connect to.
  * \param port        uint32_t - The port to connect to.
@@ -209,9 +211,9 @@ void ssl_init(sslclient_context *ssl_client, Client *client)
  * \param cli_key     const char*- The client key.
  * \param pskIdent    const char* - The PSK identity.
  * \param psKey       const char* - The PSK key.
- * \return int        1 if successful. 
+ * \return int        1 if successful.
  */
-int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t port, int timeout, const char *rootCABuff, const char *cli_cert, const char *cli_key, const char *pskIdent, const char *psKey)
+int start_ssl_client(sslclient_context* ssl_client, const char* host, uint32_t port, int timeout, const char* rootCABuff, const char* cli_cert, const char* cli_key, const char* pskIdent, const char* psKey)
 {
   char buf[512];
   int ret, flags;
@@ -220,7 +222,7 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
 
   log_d("Connecting to %s:%d", host, port);
 
-  Client *pClient = ssl_client->client;
+  Client* pClient = ssl_client->client;
 
   if (!pClient) {
     log_e("Client provider not initialised");
@@ -236,7 +238,7 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
   mbedtls_entropy_init(&ssl_client->entropy_ctx);
 
   ret = mbedtls_ctr_drbg_seed(&ssl_client->drbg_ctx, mbedtls_entropy_func,
-                              &ssl_client->entropy_ctx, (const unsigned char *) pers, strlen(pers));
+                              &ssl_client->entropy_ctx, (const unsigned char*) pers, strlen(pers));
   if (ret < 0) {
     return handle_error(ret);
   }
@@ -244,9 +246,9 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
   log_v("Setting up the SSL/TLS structure...");
 
   if ((ret = mbedtls_ssl_config_defaults(&ssl_client->ssl_conf,
-                                          MBEDTLS_SSL_IS_CLIENT,
-                                          MBEDTLS_SSL_TRANSPORT_STREAM,
-                                          MBEDTLS_SSL_PRESET_DEFAULT)) != 0) {
+                                         MBEDTLS_SSL_IS_CLIENT,
+                                         MBEDTLS_SSL_TRANSPORT_STREAM,
+                                         MBEDTLS_SSL_PRESET_DEFAULT)) != 0) {
     return handle_error(ret);
   }
 
@@ -257,7 +259,7 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
     log_v("Loading CA cert");
     mbedtls_x509_crt_init(&ssl_client->ca_cert);
     mbedtls_ssl_conf_authmode(&ssl_client->ssl_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
-    ret = mbedtls_x509_crt_parse(&ssl_client->ca_cert, (const unsigned char *)rootCABuff, strlen(rootCABuff) + 1);
+    ret = mbedtls_x509_crt_parse(&ssl_client->ca_cert, (const unsigned char*)rootCABuff, strlen(rootCABuff) + 1);
     mbedtls_ssl_conf_ca_chain(&ssl_client->ssl_conf, &ssl_client->ca_cert, NULL);
     //mbedtls_ssl_conf_verify(&ssl_client->ssl_ctx, my_verify, NULL );
     if (ret < 0) {
@@ -266,29 +268,45 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
   } else if (pskIdent != NULL && psKey != NULL) {
     log_v("Setting up PSK");
     // convert PSK from hex to binary
-    if ((strlen(psKey) & 1) != 0 || strlen(psKey) > 2*MBEDTLS_PSK_MAX_LEN) {
+    if ((strlen(psKey) & 1) != 0 || strlen(psKey) > 2 * MBEDTLS_PSK_MAX_LEN) {
       log_e("pre-shared key not valid hex or too long");
       return -1;
     }
     unsigned char psk[MBEDTLS_PSK_MAX_LEN];
-    size_t psk_len = strlen(psKey)/2;
-    for (int j=0; j<strlen(psKey); j+= 2) {
+    size_t psk_len = strlen(psKey) / 2;
+    for (int j = 0; j < strlen(psKey); j += 2) {
       char c = psKey[j];
-      if (c >= '0' && c <= '9') c -= '0';
-      else if (c >= 'A' && c <= 'F') c -= 'A' - 10;
-      else if (c >= 'a' && c <= 'f') c -= 'a' - 10;
-      else return -1;
-      psk[j/2] = c<<4;
-      c = psKey[j+1];
-      if (c >= '0' && c <= '9') c -= '0';
-      else if (c >= 'A' && c <= 'F') c -= 'A' - 10;
-      else if (c >= 'a' && c <= 'f') c -= 'a' - 10;
-      else return -1;
-      psk[j/2] |= c;
+      if (c >= '0' && c <= '9') {
+        c -= '0';
+      }
+      else if (c >= 'A' && c <= 'F') {
+        c -= 'A' - 10;
+      }
+      else if (c >= 'a' && c <= 'f') {
+        c -= 'a' - 10;
+      }
+      else {
+        return -1;
+      }
+      psk[j / 2] = c << 4;
+      c = psKey[j + 1];
+      if (c >= '0' && c <= '9') {
+        c -= '0';
+      }
+      else if (c >= 'A' && c <= 'F') {
+        c -= 'A' - 10;
+      }
+      else if (c >= 'a' && c <= 'f') {
+        c -= 'a' - 10;
+      }
+      else {
+        return -1;
+      }
+      psk[j / 2] |= c;
     }
     // set mbedtls config
     ret = mbedtls_ssl_conf_psk(&ssl_client->ssl_conf, psk, psk_len,
-                               (const unsigned char *)pskIdent, strlen(pskIdent));
+                               (const unsigned char*)pskIdent, strlen(pskIdent));
     if (ret != 0) {
       log_e("mbedtls_ssl_conf_psk returned %d", ret);
       return handle_error(ret);
@@ -304,13 +322,13 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
 
     log_v("Loading CRT cert");
 
-    ret = mbedtls_x509_crt_parse(&ssl_client->client_cert, (const unsigned char *)cli_cert, strlen(cli_cert) + 1);
+    ret = mbedtls_x509_crt_parse(&ssl_client->client_cert, (const unsigned char*)cli_cert, strlen(cli_cert) + 1);
     if (ret < 0) {
       return handle_error(ret);
     }
 
     log_v("Loading private key");
-    ret = mbedtls_pk_parse_key(&ssl_client->client_key, (const unsigned char *)cli_key, strlen(cli_key) + 1, NULL, 0);
+    ret = mbedtls_pk_parse_key(&ssl_client->client_key, (const unsigned char*)cli_key, strlen(cli_key) + 1, NULL, 0);
 
     if (ret != 0) {
       mbedtls_x509_crt_free(&ssl_client->client_cert); // cert+key are free'd in pair
@@ -336,17 +354,17 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
   log_v("Setting up IO callbacks...");
   mbedtls_ssl_set_bio(&ssl_client->ssl_ctx, ssl_client->client,
                       client_net_send, NULL, client_net_recv_timeout );
-  
+
   log_v("Setting timeout...");
   mbedtls_ssl_conf_read_timeout(&ssl_client->ssl_conf,  timeout);
 
   log_v("Performing the SSL/TLS handshake...");
-  unsigned long handshake_start_time=millis();
+  unsigned long handshake_start_time = millis();
   while ((ret = mbedtls_ssl_handshake(&ssl_client->ssl_ctx)) != 0) {
     if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
       return handle_error(ret);
     }
-    if((millis()-handshake_start_time)>ssl_client->handshake_timeout) {
+    if ((millis() - handshake_start_time) > ssl_client->handshake_timeout) {
       return -1;
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -372,7 +390,7 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
   } else {
     log_v("Certificate verified.");
   }
-  
+
   if (rootCABuff != NULL) {
     mbedtls_x509_crt_free(&ssl_client->ca_cert);
   }
@@ -383,7 +401,7 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
 
   if (cli_key != NULL) {
     mbedtls_pk_free(&ssl_client->client_key);
-  }    
+  }
 
   log_v("Free internal heap after TLS %u", ESP.getFreeHeap());
 
@@ -393,13 +411,13 @@ int start_ssl_client(sslclient_context *ssl_client, const char *host, uint32_t p
 
 /**
  * \brief             Stop the ssl socket.
- * 
- * \param ssl_client  sslclient_context* - The ssl client context. 
- * \param rootCABuff  const char* - The root CA certificate. 
- * \param cli_cert    const char* - The client certificate. 
- * \param cli_key     const char* - The client key. 
+ *
+ * \param ssl_client  sslclient_context* - The ssl client context.
+ * \param rootCABuff  const char* - The root CA certificate.
+ * \param cli_cert    const char* - The client certificate.
+ * \param cli_key     const char* - The client key.
  */
-void stop_ssl_socket(sslclient_context *ssl_client, const char *rootCABuff, const char *cli_cert, const char *cli_key) {
+void stop_ssl_socket(sslclient_context* ssl_client, const char* rootCABuff, const char* cli_cert, const char* cli_key) {
   log_v("Cleaning SSL connection.");
 
   ssl_client->client->stop();
@@ -424,11 +442,11 @@ void stop_ssl_socket(sslclient_context *ssl_client, const char *rootCABuff, cons
 
 /**
  * \brief             Check if there is data to read or not.
- * 
- * \param ssl_client  sslclient_context* - The ssl client context. 
- * \return int        The number of bytes to read. 
+ *
+ * \param ssl_client  sslclient_context* - The ssl client context.
+ * \return int        The number of bytes to read.
  */
-int data_to_read(sslclient_context *ssl_client) {
+int data_to_read(sslclient_context* ssl_client) {
   int ret, res;
   ret = mbedtls_ssl_read(&ssl_client->ssl_ctx, NULL, 0);
   //log_e("RET: %i",ret);   //for low level debug
@@ -441,15 +459,15 @@ int data_to_read(sslclient_context *ssl_client) {
   return res;
 }
 
- /**
-  * \brief              Send data to the ssl server. 
-  * 
-  * \param ssl_client   sslclient_context* - The ssl client context. 
-  * \param data         const uint8_t* - The data to send. 
-  * \param len          size_t - The length of the data. 
-  * \return int         The number of bytes sent. 
-  */
-int send_ssl_data(sslclient_context *ssl_client, const uint8_t *data, size_t len) {
+/**
+ * \brief              Send data to the ssl server.
+ *
+ * \param ssl_client   sslclient_context* - The ssl client context.
+ * \param data         const uint8_t* - The data to send.
+ * \param len          size_t - The length of the data.
+ * \return int         The number of bytes sent.
+ */
+int send_ssl_data(sslclient_context* ssl_client, const uint8_t* data, size_t len) {
   log_v("Writing SSL (%zu bytes)...", len);  //for low level debug
   int ret = -1;
 
@@ -466,13 +484,13 @@ int send_ssl_data(sslclient_context *ssl_client, const uint8_t *data, size_t len
 
 /**
  * \brief                 Get the ssl receive object.
- * 
- * \param ssl_client      sslclient_context* - The ssl client context. 
- * \param data            uint8_t* - The data to receive. 
- * \param length          int - The length of the data. 
- * \return int            The number of bytes received. 
+ *
+ * \param ssl_client      sslclient_context* - The ssl client context.
+ * \param data            uint8_t* - The data to receive.
+ * \param length          int - The length of the data.
+ * \return int            The number of bytes received.
  */
-int get_ssl_receive(sslclient_context *ssl_client, uint8_t *data, int length) {
+int get_ssl_receive(sslclient_context* ssl_client, uint8_t* data, int length) {
   log_v( "Reading SSL (%d bytes)", length);   //for low level debug
   int ret = -1;
 
@@ -484,28 +502,31 @@ int get_ssl_receive(sslclient_context *ssl_client, uint8_t *data, int length) {
 
 /**
  * \brief           Get the ssl receive object with timeout.
- * 
- * \param pb        sslclient_context* - The ssl client context. 
- * \param res       uint8_t* - The data to receive. 
- * \return bool     True if the data was received, false otherwise. 
+ *
+ * \param pb        sslclient_context* - The ssl client context.
+ * \param res       uint8_t* - The data to receive.
+ * \return bool     True if the data was received, false otherwise.
  */
 static bool parseHexNibble(char pb, uint8_t* res) {
   if (pb >= '0' && pb <= '9') {
-    *res = (uint8_t) (pb - '0'); return true;
+    *res = (uint8_t) (pb - '0');
+    return true;
   } else if (pb >= 'a' && pb <= 'f') {
-    *res = (uint8_t) (pb - 'a' + 10); return true;
+    *res = (uint8_t) (pb - 'a' + 10);
+    return true;
   } else if (pb >= 'A' && pb <= 'F') {
-    *res = (uint8_t) (pb - 'A' + 10); return true;
+    *res = (uint8_t) (pb - 'A' + 10);
+    return true;
   }
   return false;
 }
 
 /**
  * \brief               Compare a name from certificate and domain name, return true if they match.
- * 
- * \param name          const string& - The name from certificate. 
- * \param domainName    const string& - The domain name. 
- * \return bool         True if the name from certificate and domain name match, false otherwise.  
+ *
+ * \param name          const string& - The name from certificate.
+ * \param domainName    const string& - The domain name.
+ * \return bool         True if the name from certificate and domain name match, false otherwise.
  */
 static bool matchName(const string& name, const string& domainName) {
   size_t wildcardPos = name.find('*');
@@ -536,13 +557,13 @@ static bool matchName(const string& name, const string& domainName) {
 
 /**
  * \brief               Verifies certificate provided by the peer to match specified SHA256 fingerprint.
- * 
- * \param ssl_client    sslclient_context* - The ssl client context. 
- * \param fp            const char* - The SHA256 fingerprint. 
- * \param domain_name   const char* - The domain name. 
- * \return bool         True if the certificate matches the fingerprint, false otherwise. 
+ *
+ * \param ssl_client    sslclient_context* - The ssl client context.
+ * \param fp            const char* - The SHA256 fingerprint.
+ * \param domain_name   const char* - The domain name.
+ * \return bool         True if the certificate matches the fingerprint, false otherwise.
  */
-bool verify_ssl_fingerprint(sslclient_context *ssl_client, const char* fp, const char* domain_name)
+bool verify_ssl_fingerprint(sslclient_context* ssl_client, const char* fp, const char* domain_name)
 {
   // Convert hex string to byte array
   uint8_t fingerprint_local[32];
@@ -557,8 +578,8 @@ bool verify_ssl_fingerprint(sslclient_context *ssl_client, const char* fp, const
       return false;
     }
     uint8_t high, low;
-    if (!parseHexNibble(fp[pos], &high) || !parseHexNibble(fp[pos+1], &low)) {
-      log_v("pos:%d len:%d invalid hex sequence: %c%c", pos, len, fp[pos], fp[pos+1]);
+    if (!parseHexNibble(fp[pos], &high) || !parseHexNibble(fp[pos + 1], &low)) {
+      log_v("pos:%d len:%d invalid hex sequence: %c%c", pos, len, fp[pos], fp[pos + 1]);
       return false;
     }
     pos += 2;
@@ -597,14 +618,14 @@ bool verify_ssl_fingerprint(sslclient_context *ssl_client, const char* fp, const
 
 /**
  * \brief               Checks if peer certificate has specified domain in CN or SANs.
- * 
+ *
  * \param ssl_client    sslclient_context* - The ssl client context.
- * \param domain_name   const char* - The domain name. 
+ * \param domain_name   const char* - The domain name.
  * \return bool         True if the certificate has the domain name, false otherwise.
  */
-bool verify_ssl_dn(sslclient_context *ssl_client, const char* domain_name)
+bool verify_ssl_dn(sslclient_context* ssl_client, const char* domain_name)
 {
-  log_d("domain name: '%s'", (domain_name)?domain_name:"(null)");
+  log_d("domain name: '%s'", (domain_name) ? domain_name : "(null)");
   string domain_name_str(domain_name);
   transform(domain_name_str.begin(), domain_name_str.end(), domain_name_str.begin(), ::tolower);
 
@@ -647,5 +668,3 @@ bool verify_ssl_dn(sslclient_context *ssl_client, const char* domain_name)
 
   return false;
 }
-
-} //end namespace
