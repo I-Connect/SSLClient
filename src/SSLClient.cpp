@@ -40,8 +40,8 @@ SSLClient::SSLClient() {
 
 /**
  * @brief Construct a new SSLClient::SSLClient object using the pointer to the specified client.
- * 
- * @param client 
+ *
+ * @param client
  */
 SSLClient::SSLClient(Client* client) {
   _connected = false;
@@ -82,11 +82,11 @@ void SSLClient::stop() {
 }
 
 /**
- * @brief 
- * 
- * @param ip 
- * @param port 
- * @return int 
+ * @brief
+ *
+ * @param ip
+ * @param port
+ * @return int
  */
 int SSLClient::connect(IPAddress ip, uint16_t port) {
   if (_pskIdent && _psKey) {
@@ -102,7 +102,7 @@ int SSLClient::connect(IPAddress ip, uint16_t port, int32_t timeout) {
   return connect(ip, port);
 }
 
-int SSLClient::connect(const char *host, uint16_t port) {
+int SSLClient::connect(const char* host, uint16_t port) {
   if (_pskIdent && _psKey) {
     log_v("connect with PSK");
     return connect(host, port, _pskIdent, _psKey);
@@ -111,9 +111,9 @@ int SSLClient::connect(const char *host, uint16_t port) {
   return connect(host, port, _CA_cert, _cert, _private_key);
 }
 
-int SSLClient::connect(const char *host, uint16_t port, int32_t timeout) {
-    _timeout = timeout;
-    return connect(host, port);
+int SSLClient::connect(const char* host, uint16_t port, int32_t timeout) {
+  _timeout = timeout;
+  return connect(host, port);
 }
 
 int SSLClient::connect(IPAddress ip, uint16_t port, const char* _CA_cert, const char* _cert, const char* _private_key)
@@ -123,7 +123,7 @@ int SSLClient::connect(IPAddress ip, uint16_t port, const char* _CA_cert, const 
 
 int SSLClient::connect(const char* host, uint16_t port, const char* _CA_cert, const char* _cert, const char* _private_key)
 {
-  log_v("Connecting to %s:%d", host, port);
+  log_d("Connecting to %s:%d", host, port);
   if (_timeout > 0) {
     sslclient->handshake_timeout = _timeout;
   }
@@ -135,7 +135,7 @@ int SSLClient::connect(const char* host, uint16_t port, const char* _CA_cert, co
     _connected = false;
     return 0;
   }
-  log_v("SSL connection established");
+  log_i("SSL connection established");
   _connected = true;
   return 1;
 }
@@ -183,16 +183,29 @@ int SSLClient::read()
   return data;
 }
 
+size_t SSLClient::write(const uint8_t* buf, size_t size)
+{
+  if (!_connected) {
+    return 0;
+  }
+  int res = send_ssl_data(sslclient, buf, size);
+  if (res < 0) {
+    stop();
+    res = 0;
+  }
+  return res;
+}
+
 /**
  * \brief               Reads data from the sslclient. If there is a byte peeked, it returns that byte.
- * 
- * \param buf           Buffer to read into. 
+ *
+ * \param buf           Buffer to read into.
  * \param size          Size of the buffer.
  * \return int          1 if a byte has been peeked and the client is not connected.
  * \return int          < 1 if client is connected and there is an error from get_ssl_receive().
- * \return int          > 1 if res + peeked. 
+ * \return int          > 1 if res + peeked.
  */
-int SSLClient::read(uint8_t *buf, size_t size) {
+int SSLClient::read(uint8_t* buf, size_t size) {
   log_v("This is the iClient->read() implementation");
   int peeked = 0;
   int avail = available();
@@ -221,7 +234,7 @@ int SSLClient::read(uint8_t *buf, size_t size) {
 
   if (res < 0) {
     stop();
-    return peeked?peeked:res; // If peeked is true return peeked, otherwise return res, i.e. data_to_read error.
+    return peeked ? peeked : res; // If peeked is true return peeked, otherwise return res, i.e. data_to_read error.
   }
 
   return res + peeked; // Return the number of bytes read + the number of bytes peeked.
@@ -231,7 +244,7 @@ int SSLClient::read(uint8_t *buf, size_t size) {
  * \brief               Returns how many bytes of data are available to be read from the sslclient.
  *                      It takes into account both directly readable bytes and a potentially "peeked" byte.
  *                      If there's an error or the client is not connected, it handles these scenarios appropriately.
- * 
+ *
  * \return int           1 if a byte has been peeked and the client is not connected.
  * \return int          < 1 if client is connected and there is an error from data_to_read().
  * \return int          > 1 if res + peeked.
@@ -242,15 +255,15 @@ int SSLClient::available() {
   if (!_connected) {
     return peeked;
   }
-  
+
   int res = data_to_read(sslclient); // how many bytes available to read.
-  
+
   if (res < 0) {
     stop();
-    return peeked?peeked:res; // If peeked is true return peeked, otherwise return res, i.e. data_to_read error.
+    return peeked ? peeked : res; // If peeked is true return peeked, otherwise return res, i.e. data_to_read error.
   }
 
-  return res+peeked;
+  return res + peeked;
 }
 
 uint8_t SSLClient::connected()
@@ -261,26 +274,26 @@ uint8_t SSLClient::connected()
   return _connected;
 }
 
-void SSLClient::setCACert(const char* rootCA)
+void SSLClient::setCACert (const char* rootCA)
 {
-  log_v("Set root CA");
+  log_d("Set root CA");
   _CA_cert = rootCA;
 }
 
-void SSLClient::setCertificate(const char* client_ca)
+void SSLClient::setCertificate (const char* client_ca)
 {
-  log_v("Set client CA");
+  log_d("Set client CA");
   _cert = client_ca;
 }
 
-void SSLClient::setPrivateKey(const char* private_key)
+void SSLClient::setPrivateKey (const char* private_key)
 {
-  log_v("Set client PK");
+  log_d("Set client PK");
   _private_key = private_key;
 }
 
 void SSLClient::setPreSharedKey(const char* pskIdent, const char* psKey) {
-  log_v("Set PSK");
+  log_d("Set PSK");
   _pskIdent = pskIdent;
   _psKey = psKey;
 }
@@ -356,11 +369,10 @@ void SSLClient::setHandshakeTimeout(unsigned long handshake_timeout)
   sslclient->handshake_timeout = handshake_timeout * 1000;
 }
 
-void SSLClient::setClient(Client* client){
-    sslclient->client = client;
+void SSLClient::setClient(Client* client) {
+  sslclient->client = client;
 }
 
-void SSLClient::setTimeout(uint32_t milliseconds){ 
-  _timeout = milliseconds; 
+void SSLClient::setTimeout(uint32_t milliseconds) {
+  _timeout = milliseconds;
 }
-
